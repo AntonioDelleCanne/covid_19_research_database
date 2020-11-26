@@ -27,28 +27,27 @@
 -- in the database after they made their course and are no longer active
 
 -- TODO unify/see what's up with who_ids
--- TODO see what's up with date start 00000000000 in phsm research queries
 
 drop table if exists phsm_record_1NF;
 create table phsm_record_1NF (
   measure_number int not null auto_increment,
+  who_code char(80) not null,
   who_id char(80) not null,
-  who_region text,
-  country_territory_area text,
+  who_region text not null,
+  country_territory_area text not null,
   iso char(80) not null,
-  iso_3166_1_numeric int default null,
-  admin_level text,
-  area_covered text,
-  who_code mediumtext,
-  who_category text,
+  iso_3166_1_numeric int not null,
+  admin_level text not null,
+  who_category text not null,
   who_subcategory text,
   who_measure text,
-  comments text,
+  area_covered text,
   date_start date,
+  date_end date,
+  comments text,
   measure_stage text,
   prev_measure_number text,
   following_measure_number text,
-  date_end date,
   reason_ended text,
   targeted text,
   enforcement text,
@@ -76,10 +75,13 @@ DELIMITER ;
 insert into phsm_record_1NF (who_id, who_region, country_territory_area, iso, iso_3166_1_numeric, admin_level, area_covered, 
 	who_code, who_category, who_subcategory, who_measure, comments, date_start, measure_stage, prev_measure_number, 
     following_measure_number, date_end, reason_ended, targeted, enforcement, non_compliance_penalty)
-select distinct who_id, who_region, country_territory_area, iso, iso_3166_1_numeric, admin_level, area_covered, 
-	who_code, who_category, who_subcategory, who_measure, comments, STR_TO_DATE(date_start,'%d/%m/%Y'), measure_stage, prev_measure_number, 
-    following_measure_number, STR_TO_DATE(date_end,'%d/%m/%Y'), reason_ended, targeted, enforcement, non_compliance_penalty
+select distinct who_id, who_region, country_territory_area, iso, iso_3166_1_numeric, admin_level, if ( area_covered = '' , null , area_covered), 
+	who_code, who_category, if ( who_subcategory = '' , null , who_subcategory), if ( who_measure = '' , null , who_measure), if ( comments = '' , null , comments), if ( date_start = '' , null , STR_TO_DATE(date_start,'%d/%m/%Y')), if ( measure_stage = '' , null , measure_stage), if ( prev_measure_number = '' , null , prev_measure_number), 
+    if ( following_measure_number = '' , null , following_measure_number), if ( date_end = '' , null , STR_TO_DATE(date_end,'%d/%m/%Y')), if ( reason_ended= '' , null , reason_ended), if ( targeted= '' , null , targeted), if ( enforcement= '' , null , enforcement), if ( non_compliance_penalty= '' , null , non_compliance_penalty)
 from phsm;
+
+select * from phsm
+where targeted !='';
 
 -- cleaning step
 -- in Pakistan records, both PAK and IND iso appear, this field is unified to PAK, updating the related fields who_region, iso, iso_3166_1_numeric
@@ -203,6 +205,20 @@ select distinct who_id, iso, admin_level, area_covered, who_code, comments, date
 from phsm_record_1NF;
 
 
+select * from phsm_record
+order by who_id;
+
+select * from phsm
+where date_end = '';
 
 select * from phsm_record
-order by iso, date_start asc;
+where who_id in (
+select who_id 
+from phsm_record
+group by who_id
+having count(*) > 1)
+and who_id in (
+select prev_measure_number from phsm_record)
+and who_id in (
+select following_measure_number from phsm_record)
+order by who_id, iso, date_start asc;
