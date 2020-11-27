@@ -39,6 +39,8 @@ from corona;
 
 drop table if exists corona_record;
 drop table if exists corona_location;
+
+
 create table corona_location (
 	geoId varchar(255) not null,
     countriesAndTerritories varchar(255) DEFAULT NULL,

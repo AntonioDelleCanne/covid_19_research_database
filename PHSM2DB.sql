@@ -15,18 +15,22 @@
 
 
 -- 1NF
--- eliminate lineID and use of distinct to eliminate duplicated records
--- line ids are reassigned since in the original dataset some rows are duplicates
--- solve incongruences in the data, for instance 
--- Sudan,Israel,Pakistan have different who_regions (2) in different records, so one region will be chosen
--- by observing the dataset is emerged that the who_id indicates the announcment (an act/law) of multiple measures.
--- by observing the data is is emerged that each who_id can contain different measure, so each measure will be identified
--- by the who_id and by a progressive id within the who_id (measure_number)
--- text is converted to date
--- since in the dataset there aren't any null values in date_start and date_ed fields, we assume that meaures are inserted
--- in the database after they made their course and are no longer active
 
--- TODO unify/see what's up with who_ids
+-- * Since we are using the distinct comand to eliminate identycal rows (without including the line id),
+-- the line ids are recreated.
+-- * Sudan,Israel,Pakistan have different who_regions (2), to accomodate this this we are creating the table phsm_iso_region
+-- (by observing the dataset is emerged that the who_id indicates the announcment (an act/law) of multiple measures.)
+-- (by observing the data is is emerged that each who_id can contain different measure, so each measure will be identified)
+-- * textual date representation is converted to sql date data type
+-- * all the empty strings '' are replaced with NULL
+-- * as in the documentation, when area_covered is NULL, it means that the measure is applied to the country / territory
+-- * when enforcement is null we consider it to be 'Not known' and we replace it as such
+-- * all the measures with measure_satge as 'introduction / extension of measures' seem to be standalone measures
+-- that represent singel events, and have no duration in time, they all have date_end at null and
+-- prev_measure_number and following_measure_number at null therefore these measure_stages will be changed to 'new'
+-- * TODO since in the targeted field both textual and numerical information appears, we replace the numerical codes with
+-- the corresponding meaning of each fouind in the documentaiton
+-- * TODO put links in separate comun, where like https:// till space
 
 drop table if exists phsm_record_1NF;
 create table phsm_record_1NF (
@@ -50,38 +54,24 @@ create table phsm_record_1NF (
   following_measure_number text,
   reason_ended text,
   targeted text,
-  enforcement text,
+  enforcement text not null,
   non_compliance_penalty text,
   PRIMARY KEY (measure_number)
 );
 
-/*
-drop trigger if exists trg_phsm_record_1NF_increment;
-DELIMITER //
-CREATE TRIGGER trg_phsm_record_1NF_increment
-BEFORE INSERT ON phsm_record_1NF
-FOR EACH ROW
-BEGIN
-      DECLARE nseq int;
-      SELECT  COALESCE(MAX(measure_number), 0) + 1
-      INTO    nseq
-      FROM    phsm_record_1NF
-      WHERE   who_id = NEW.who_id;
-      SET NEW.measure_number = nseq;
-END //
-DELIMITER ;
-*/
+
+use covid_19;
+select distinct iso, iso_3166_1_numeric from phsm
+where iso in (select iso from phsm group by iso having count(distinct iso_3166_1_numeric) > 1);
 
 insert into phsm_record_1NF (who_id, who_region, country_territory_area, iso, iso_3166_1_numeric, admin_level, area_covered, 
 	who_code, who_category, who_subcategory, who_measure, comments, date_start, measure_stage, prev_measure_number, 
     following_measure_number, date_end, reason_ended, targeted, enforcement, non_compliance_penalty)
 select distinct who_id, who_region, country_territory_area, iso, iso_3166_1_numeric, admin_level, if ( area_covered = '' , null , area_covered), 
-	who_code, who_category, if ( who_subcategory = '' , null , who_subcategory), if ( who_measure = '' , null , who_measure), if ( comments = '' , null , comments), if ( date_start = '' , null , STR_TO_DATE(date_start,'%d/%m/%Y')), if ( measure_stage = '' , null , measure_stage), if ( prev_measure_number = '' , null , prev_measure_number), 
-    if ( following_measure_number = '' , null , following_measure_number), if ( date_end = '' , null , STR_TO_DATE(date_end,'%d/%m/%Y')), if ( reason_ended= '' , null , reason_ended), if ( targeted= '' , null , targeted), if ( enforcement= '' , null , enforcement), if ( non_compliance_penalty= '' , null , non_compliance_penalty)
+	who_code, who_category, if ( who_subcategory = '' , null , who_subcategory), if ( who_measure = '' , null , who_measure), if ( comments = '' , null , comments), 
+    if ( date_start = '' , null , STR_TO_DATE(date_start,'%d/%m/%Y')), if ( measure_stage = '' , null , if(measure_stage = 'introduction / extension of measures', 'new', measure_stage)), if ( prev_measure_number = '' , null , prev_measure_number), 
+    if ( following_measure_number = '' , null , following_measure_number), if ( date_end = '' , null , STR_TO_DATE(date_end,'%d/%m/%Y')), if ( reason_ended= '' , null , reason_ended), if ( targeted= '' , null , targeted), if ( enforcement= '' , 'Not known' , enforcement), if ( non_compliance_penalty= '' , null , non_compliance_penalty)
 from phsm;
-
-select * from phsm
-where targeted !='';
 
 -- cleaning step
 -- in Pakistan records, both PAK and IND iso appear, this field is unified to PAK, updating the related fields who_region, iso, iso_3166_1_numeric
@@ -92,24 +82,17 @@ set who_region='EMRO', iso='PAK', iso_3166_1_numeric=586
 where country_territory_area='Pakistan';
 
 -- select distinct country_territory_area, who_region, iso, iso_3166_1_numeric from phsm_record_1NF where country_territory_area = "Israel";
+-- TODO eliminate
 update phsm_record_1NF
 set who_region='EMRO', iso='ISR', iso_3166_1_numeric=275
 where country_territory_area='Israel';
 
 
 -- select distinct country_territory_area, who_region, iso, iso_3166_1_numeric from phsm_record_1NF where country_territory_area = "Sudan";
+-- TODO eliminate
 update phsm_record_1NF
 set who_region='EMRO', iso='SDN', iso_3166_1_numeric=729
 where country_territory_area='Sudan';
-
--- change '' with NULL
-update phsm_record_1NF
-set prev_measure_number=NULL
-where prev_measure_number='';
-
-update phsm_record_1NF
-set following_measure_number=NULL
-where following_measure_number='';
 
 
 -- 2NF
@@ -146,9 +129,17 @@ create table phsm_location (
 	iso char(80) not null,
 	country_territory_area text,
 	iso_3166_1_numeric int default null,
-    who_region text,
 	primary key (iso)
 );
+
+create table phsm_iso_region(
+	iso char(80) not null,
+	who_region text,
+    primary key (iso),
+    foreign key (iso) references phsm_location(iso)
+);
+
+-- TODO check iso_3166_1_numeric
 
 create table phsm_dm_record (
   measure_number int not null auto_increment,
@@ -172,30 +163,17 @@ create table phsm_dm_record (
   foreign key (iso) references phsm_location(iso)
 );
 
-/*
-drop trigger if exists trg_phsm_record_increment;
-DELIMITER //
-CREATE TRIGGER trg_phsm_record_increment
-BEFORE INSERT ON phsm_record
-FOR EACH ROW
-BEGIN
-      DECLARE nseq int;
-      SELECT  COALESCE(MAX(measure_number), 0) + 1
-      INTO    nseq
-      FROM    phsm_record_1NF
-      WHERE   who_id = NEW.who_id;
-      SET NEW.measure_number = nseq;
-END //
-DELIMITER ;
-*/
-
 
 insert into phsm_who_measure (who_code, who_category, who_subcategory, who_measure)
 select distinct  who_code, who_category, who_subcategory, who_measure
 from phsm_record_1NF;
 
-insert into phsm_location (who_region, country_territory_area, iso, iso_3166_1_numeric)
-select distinct who_region, country_territory_area, iso, iso_3166_1_numeric
+insert into phsm_location (country_territory_area, iso, iso_3166_1_numeric)
+select distinct country_territory_area, iso, iso_3166_1_numeric
+from phsm_record_1NF;
+
+insert into phsm_iso_region (who_region, iso)
+select distinct who_region, iso
 from phsm_record_1NF;
 
 insert into phsm_record (who_id, iso, admin_level, area_covered, who_code, comments, date_start, measure_stage, prev_measure_number, 
@@ -203,22 +181,3 @@ insert into phsm_record (who_id, iso, admin_level, area_covered, who_code, comme
 select distinct who_id, iso, admin_level, area_covered, who_code, comments, date_start, measure_stage, prev_measure_number, 
     following_measure_number, date_end, reason_ended, targeted, enforcement, non_compliance_penalty
 from phsm_record_1NF;
-
-
-select * from phsm_record
-order by who_id;
-
-select * from phsm
-where date_end = '';
-
-select * from phsm_record
-where who_id in (
-select who_id 
-from phsm_record
-group by who_id
-having count(*) > 1)
-and who_id in (
-select prev_measure_number from phsm_record)
-and who_id in (
-select following_measure_number from phsm_record)
-order by who_id, iso, date_start asc;
