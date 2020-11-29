@@ -18,7 +18,6 @@
 
 -- * Since we are using the distinct comand to eliminate identycal rows (without including the line id),
 -- the line ids are recreated.
--- * Sudan,Israel,Pakistan have different who_regions (2), to accomodate this this we are creating the table phsm_iso_region
 -- (by observing the dataset is emerged that the who_id indicates the announcment (an act/law) of multiple measures.)
 -- (by observing the data is is emerged that each who_id can contain different measure, so each measure will be identified)
 -- * textual date representation is converted to sql date data type
@@ -29,15 +28,17 @@
 -- that represent singel events, and have no duration in time, they all have date_end at null and
 -- prev_measure_number and following_measure_number at null therefore these measure_stages will be changed to 'new'
 -- * TODO since in the targeted field both textual and numerical information appears, we replace the numerical codes with
--- the corresponding meaning of each fouind in the documentaiton
+-- the corresponding meaning of each found in the documentaiton
 -- * TODO put links in separate comun, where like https:// till space
+
+use covid_19;
 
 drop table if exists phsm_record_1NF;
 create table phsm_record_1NF (
   measure_number int not null auto_increment,
   who_code char(80) not null,
   who_id char(80) not null,
-  who_region text not null,
+  who_region char(80) not null,
   country_territory_area text not null,
   iso char(80) not null,
   iso_3166_1_numeric int not null,
@@ -59,11 +60,6 @@ create table phsm_record_1NF (
   PRIMARY KEY (measure_number)
 );
 
-
-use covid_19;
-select distinct iso, iso_3166_1_numeric from phsm
-where iso in (select iso from phsm group by iso having count(distinct iso_3166_1_numeric) > 1);
-
 insert into phsm_record_1NF (who_id, who_region, country_territory_area, iso, iso_3166_1_numeric, admin_level, area_covered, 
 	who_code, who_category, who_subcategory, who_measure, comments, date_start, measure_stage, prev_measure_number, 
     following_measure_number, date_end, reason_ended, targeted, enforcement, non_compliance_penalty)
@@ -74,25 +70,13 @@ select distinct who_id, who_region, country_territory_area, iso, iso_3166_1_nume
 from phsm;
 
 -- cleaning step
--- in Pakistan records, both PAK and IND iso appear, this field is unified to PAK, updating the related fields who_region, iso, iso_3166_1_numeric
--- the same is done for Sudan and Israel, Sudan will be considered EMRO, Israel will be considered EMRO
+-- in Pakistan records, both PAK and IND iso appear, since IND only happens two times,
+-- we assume this is an error and we correct it by updating
+-- the related fields: who_region, iso, iso_3166_1_numeric
 -- select distinct country_territory_area, who_region, iso, iso_3166_1_numeric from phsm_record_1NF where country_territory_area = "Pakistan";
 update phsm_record_1NF
 set who_region='EMRO', iso='PAK', iso_3166_1_numeric=586
 where country_territory_area='Pakistan';
-
--- select distinct country_territory_area, who_region, iso, iso_3166_1_numeric from phsm_record_1NF where country_territory_area = "Israel";
--- TODO eliminate
-update phsm_record_1NF
-set who_region='EMRO', iso='ISR', iso_3166_1_numeric=275
-where country_territory_area='Israel';
-
-
--- select distinct country_territory_area, who_region, iso, iso_3166_1_numeric from phsm_record_1NF where country_territory_area = "Sudan";
--- TODO eliminate
-update phsm_record_1NF
-set who_region='EMRO', iso='SDN', iso_3166_1_numeric=729
-where country_territory_area='Sudan';
 
 
 -- 2NF
@@ -105,13 +89,17 @@ where country_territory_area='Sudan';
 -- A relation schema R is in 3NF if it satisfies 2NF and 
 -- no nonprime attribute of R is transitively dependent on the primary key
 --
--- by observing the table dependencies, we see that who_code -> who_category, who_subcategory, who_measure , aso these are put in a separate table
+-- * By observing the table dependencies, we see that who_code -> who_category, who_subcategory, who_measure , aso these are put in a separate table
 -- the same is done for iso <-> iso31661Numeric <-> countryTerritoryArea ; iso -> who_region
--- also previous and following measure number are references respectively to previous and following phsm disposition's who_id so this is modeled
+-- * Also previous and following measure number are references respectively to previous and following phsm disposition's who_id so this is modeled
 -- through the use of foreign keys
+-- * Sudan,Israel,Pakistan have different who_regions (2), to accomodate this this we are creating the table phsm_iso_region
+-- * Also the iso with value 'ISR', is associated with two different  iso_3166_1_numeric values, to accomodate this this we are creating the table phms_iso_iso_3166_1_numeric
 
 
 drop table if exists phsm_record;
+drop table if exists phms_iso_iso_3166_1_numeric;
+drop table if exists phsm_iso_region;
 drop table if exists phsm_location;
 drop table if exists phsm_who_measure;
 
@@ -128,25 +116,29 @@ create table phsm_who_measure (
 create table phsm_location (
 	iso char(80) not null,
 	country_territory_area text,
-	iso_3166_1_numeric int default null,
 	primary key (iso)
 );
 
 create table phsm_iso_region(
 	iso char(80) not null,
-	who_region text,
-    primary key (iso),
+	who_region char(80) not null,
+    primary key (iso, who_region),
     foreign key (iso) references phsm_location(iso)
 );
 
--- TODO check iso_3166_1_numeric
+create table phms_iso_iso_3166_1_numeric(
+	iso char(80) not null,
+	iso_3166_1_numeric int not null,
+    primary key (iso, iso_3166_1_numeric),
+    foreign key (iso) references phsm_location(iso)
+);
 
-create table phsm_dm_record (
+create table phsm_record (
   measure_number int not null auto_increment,
   iso char(80) not null,
   who_code char(80) not null,
-  date_start date not null,
-  date_end text not null,
+  date_start date,
+  date_end date,
   who_id char(80) not null,
   admin_level text,
   area_covered text,
@@ -163,21 +155,25 @@ create table phsm_dm_record (
   foreign key (iso) references phsm_location(iso)
 );
 
-
 insert into phsm_who_measure (who_code, who_category, who_subcategory, who_measure)
 select distinct  who_code, who_category, who_subcategory, who_measure
 from phsm_record_1NF;
 
-insert into phsm_location (country_territory_area, iso, iso_3166_1_numeric)
-select distinct country_territory_area, iso, iso_3166_1_numeric
+insert into phsm_location (country_territory_area, iso)
+select distinct country_territory_area, iso
 from phsm_record_1NF;
+
+insert into phms_iso_iso_3166_1_numeric (iso, iso_3166_1_numeric)
+select distinct iso, iso_3166_1_numeric
+from phsm_record_1NF;
+
 
 insert into phsm_iso_region (who_region, iso)
 select distinct who_region, iso
 from phsm_record_1NF;
 
-insert into phsm_record (who_id, iso, admin_level, area_covered, who_code, comments, date_start, measure_stage, prev_measure_number, 
+insert into phsm_record (measure_number, who_id, iso, admin_level, area_covered, who_code, comments, date_start, measure_stage, prev_measure_number, 
     following_measure_number, date_end, reason_ended, targeted, enforcement, non_compliance_penalty)
-select distinct who_id, iso, admin_level, area_covered, who_code, comments, date_start, measure_stage, prev_measure_number, 
+select distinct measure_number, who_id, iso, admin_level, area_covered, who_code, comments, date_start, measure_stage, prev_measure_number, 
     following_measure_number, date_end, reason_ended, targeted, enforcement, non_compliance_penalty
 from phsm_record_1NF;
