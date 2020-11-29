@@ -5,14 +5,18 @@
 
 -- when are the first cases of covid-19 recorded in each country?
 -- the caes are also shown to have an idea of what could be the dealy between the real arrival of the virus and the actual recording date
-select distinct cl.countriesAndTerritories, cl.geoId, cr.recordingDate as firstCases, cr.cases
-from corona_record as cr
-natural join corona_location cl
+select distinct cl.countriesAndTerritories, cl.geoId, cr.cases, ct.*
+from corona_dm_record as cr
+natural join corona_dm_location cl
+natural join corona_dm_time ct
 where cr.cases > 0
-and cr.recordingDate <= all (select cr1.recordingDate 
+and cr.recordingDate = (select cr1.recordingDate 
 from corona_record as cr1
+natural join corona_dm_time ct1
 where cr1.geoId = cr.geoId
-and cr1.cases > 0)
+and cr1.cases > 0
+order by year, month, day asc
+limit 1)
 order by cl.countriesAndTerritories;
 
 

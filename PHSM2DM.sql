@@ -84,7 +84,6 @@ END;
 |
 DELIMITER ;
 CALL filldates(@min_date, @max_date);
-Select * from phsm_dm_time;
 
 --
 
