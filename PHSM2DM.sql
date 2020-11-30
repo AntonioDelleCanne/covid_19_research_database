@@ -15,14 +15,6 @@ insert into phsm_dm_who_measure select * from phsm_who_measure;
 create table phsm_dm_location like phsm_location;
 insert into phsm_dm_location select * from phsm_location;
 
-create table phsm_dm_time(
-	timeCode int NOT NULL AUTO_INCREMENT,
-	day int DEFAULT NULL,
-	month int DEFAULT NULL,
-	year int DEFAULT NULL,
-	PRIMARY KEY (timeCode)
-);
-
 create table phsm_dm_iso_region (
 	iso char(80) not null,
 	who_region char(80) not null,
@@ -35,6 +27,14 @@ create table phms_dm_iso_iso_3166_1_numeric (
 	iso_3166_1_numeric int not null,
     primary key (iso, iso_3166_1_numeric),
     foreign key (iso) references phsm_dm_location(iso)
+);
+
+create table phsm_dm_time(
+	timeCode int NOT NULL AUTO_INCREMENT,
+	day int DEFAULT NULL,
+	month int DEFAULT NULL,
+	year int DEFAULT NULL,
+	PRIMARY KEY (timeCode)
 );
 
 create table phsm_dm_record (
