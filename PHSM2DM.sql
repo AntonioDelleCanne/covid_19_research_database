@@ -1,16 +1,27 @@
 -- Student Name: Antonio delle Canne
 -- Student Number : K20113110
 
+
+
+-- we are creating a new table indicating the area where the measure is applied, in which we are including the
+-- area_covered and the location information we had in the DB
+-- we do this because the field area_covered does doesn't make sense on its own
+-- and in order to acquire meaning it has to be accessed with the location infoirmation,
+-- for insatcne if the area_covered field is null, it means that the measure is applied to the iso area,
+-- so we need to access the iso field in order to know what the area_covered is
+-- we are doing this only now because this problem wasn't present in the DB since
+-- the iso and the area_covered were both in the phsms_record table
+
+
 drop table if exists phsm_dm_record;
 drop table if exists phsm_dm_time;
+drop table if exists phsm_dm_date;
 drop table if exists phms_dm_iso_iso_3166_1_numeric;
 drop table if exists phsm_dm_iso_region;
+drop table if exists phsm_dm_area;
 drop table if exists phsm_dm_location;
+drop table if exists phsm_dm_measure_details;
 drop table if exists phsm_dm_who_measure;
-
-create table phsm_dm_who_measure like phsm_who_measure;
-insert into phsm_dm_who_measure select * from phsm_who_measure;
-
 
 create table phsm_dm_location like phsm_location;
 insert into phsm_dm_location select * from phsm_location;
@@ -29,23 +40,25 @@ create table phms_dm_iso_iso_3166_1_numeric (
     foreign key (iso) references phsm_dm_location(iso)
 );
 
-create table phsm_dm_time(
-	timeCode int NOT NULL AUTO_INCREMENT,
-	day int DEFAULT NULL,
-	month int DEFAULT NULL,
-	year int DEFAULT NULL,
-	PRIMARY KEY (timeCode)
+create table phsm_dm_area (
+	area_code int not null auto_increment,
+    iso char(80) not null,
+    area_covered text,
+    primary key (area_code),
+	foreign key (iso) references phsm_dm_location(iso)
 );
 
-create table phsm_dm_record (
-  measure_number int not null auto_increment,
-  iso char(80) not null,
+create table phsm_dm_who_measure like phsm_who_measure;
+insert into phsm_dm_who_measure select * from phsm_who_measure;
+
+-- since this table contains all of the attributes
+-- necessary to uniquely identify each record, each row will correspond to a record
+-- therefore we can use the pk of the phsm_record table as an identifier
+create table phsm_dm_measure_details(
+  measure_number int not null,
   who_code char(80) not null,
-  date_start int default null,
-  date_end int default null,
   who_id char(80) not null,
   admin_level text,
-  area_covered text,
   comments text,
   measure_stage text,
   prev_measure_number char(80),
@@ -55,12 +68,39 @@ create table phsm_dm_record (
   enforcement text,
   non_compliance_penalty text,
   primary key(measure_number),
-  foreign key (who_code) references phsm_dm_who_measure(who_code),
-  foreign key (iso) references phsm_dm_location(iso)
+  foreign key (who_code) references phsm_dm_who_measure(who_code)
 );
 
+create table phsm_dm_date(
+	timeCode int NOT NULL AUTO_INCREMENT,
+	day int DEFAULT NULL,
+	month int DEFAULT NULL,
+	year int DEFAULT NULL,
+	PRIMARY KEY (timeCode)
+);
+
+create table phsm_dm_time(
+	time_code int NOT NULL AUTO_INCREMENT,
+	date_start int,
+    date_end int,
+	PRIMARY KEY (time_code),
+    foreign key (date_start) references phsm_dm_date(timeCode),
+    foreign key (date_end) references phsm_dm_date(timeCode)
+);
+
+create table phsm_dm_record (
+	measure_number int not null,
+    time_code int not null,
+    area_code int not null,
+    foreign key (time_code) references phsm_dm_time(time_code),
+	foreign key (area_code) references phsm_dm_area(area_code),
+    foreign key (measure_number) references phsm_dm_measure_details(measure_number)
+);
+
+-- ---
 -- fill the time dimension table with dates from the minumum date value to the maximum date value present
 -- in the date_start ad date_end fields of the record table
+-- TODO check date interval for integration
 
 select @min_date := min(dates), @max_date := max(dates) from
 (select distinct date_start as dates
@@ -77,32 +117,57 @@ DELIMITER |
 CREATE PROCEDURE filldates(dateStart DATE, dateEnd DATE)
 BEGIN
   WHILE dateStart <= dateEnd DO
-    INSERT INTO phsm_dm_time (day, month, year) VALUES (day(dateStart), month(dateStart), year(dateStart));
+    INSERT INTO phsm_dm_date (day, month, year) VALUES (day(dateStart), month(dateStart), year(dateStart));
     SET dateStart = date_add(dateStart, INTERVAL 1 DAY);
   END WHILE;
 END;
 |
 DELIMITER ;
 CALL filldates(@min_date, @max_date);
-
 --
 
 insert into phms_dm_iso_iso_3166_1_numeric (iso, iso_3166_1_numeric)
 select distinct iso, iso_3166_1_numeric
 from phms_iso_iso_3166_1_numeric;
 
-
 insert into phsm_dm_iso_region (who_region, iso)
 select distinct who_region, iso
 from phsm_iso_region;
 
 
-insert into phsm_dm_record (measure_number, who_id, iso, admin_level, area_covered, who_code, comments, measure_stage, prev_measure_number, 
-    following_measure_number, reason_ended, targeted, enforcement, non_compliance_penalty, date_start, date_end)
-select distinct measure_number, who_id, iso, admin_level, area_covered, who_code, comments, measure_stage, prev_measure_number, 
-    following_measure_number, reason_ended, targeted, enforcement, non_compliance_penalty, pt_start.timeCode , pt_end.timeCode
-from phsm_record pr
-join phsm_dm_time pt_start
-on day(pr.date_start) = pt_start.day and month(pr.date_start) = pt_start.month and year(pr.date_start) = pt_start.year
-join phsm_dm_time pt_end
-on day(pr.date_end) = pt_end.day and month(pr.date_end) = pt_end.month and year(pr.date_end) = pt_end.year;
+insert into phsm_dm_area (iso, area_covered)
+select distinct iso, area_covered
+from phsm_record;
+
+insert into phsm_dm_measure_details (
+  measure_number, who_code, who_id, admin_level, comments,
+  measure_stage, prev_measure_number,
+  following_measure_number, reason_ended,
+  targeted, enforcement, non_compliance_penalty)
+select distinct measure_number, who_code, who_id, admin_level, comments,
+  measure_stage, prev_measure_number,
+  following_measure_number, reason_ended,
+  targeted, enforcement, non_compliance_penalty
+from phsm_record;
+
+insert into phsm_dm_time (date_start, date_end)
+select distinct t1.timeCode, t2.timeCode
+from phsm_record pr1
+left join phsm_dm_date t1
+on day(pr1.date_start) = t1.day and month(pr1.date_start) = t1.month and year(pr1.date_start) = t1.year
+left join phsm_dm_date t2
+on day(pr1.date_end) = t2.day and month(pr1.date_end) = t2.month and year(pr1.date_end) = t2.year;
+
+insert into phsm_dm_record (measure_number, time_code, area_code)
+select pmd.measure_number, tm.time_code, ar.area_code
+from phsm_record pr1
+join phsm_dm_area ar
+on pr1.iso <=> ar.iso and pr1.area_covered <=> ar.area_covered
+join phsm_dm_measure_details pmd
+on pr1.measure_number <=> pmd.measure_number
+left join phsm_dm_date t1
+on day(pr1.date_start) <=> t1.day and month(pr1.date_start) <=> t1.month and year(pr1.date_start) <=> t1.year
+left join phsm_dm_date t2
+on day(pr1.date_end) <=> t2.day and month(pr1.date_end) <=> t2.month and year(pr1.date_end) <=> t2.year
+join phsm_dm_time tm
+on tm.date_start <=> t1.timeCode and tm.date_end <=> t2.timeCode;

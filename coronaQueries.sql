@@ -1,8 +1,6 @@
 -- Student Name: Antonio delle Canne
 -- Student Number : K20113110
 
-
-
 -- when are the first cases of covid-19 recorded in each country?
 -- the caes are also shown to have an idea of what could be the dealy between the real arrival of the virus and the actual recording date
 select distinct cl.countriesAndTerritories, cl.geoId, cr.cases, ct.*
@@ -22,9 +20,9 @@ order by year, month, day asc
 limit 1)
 order by cl.countriesAndTerritories;
 
+-- TODO query smaller results
 -- what is the month with the most new cases for each country?
 -- here the population data is also displayed in order to put the number of cases in perspective
-
 select cl.countriesAndTerritories, cl.geoId, ct.year, ct.month, sum(cr.cases) as cases_sum, cl.popData2019
 from corona_dm_record as cr
 join corona_dm_location cl

@@ -31,6 +31,13 @@
 -- the corresponding meaning of each found in the documentaiton
 -- * TODO put links in separate comun, where like https:// till space
 
+-- SELECT area_covered, iso_3166_1_numeric, date_start, date_end, who_code, who_id, targeted, comments
+-- FROM phsm_record_1NF
+-- GROUP BY area_covered, iso_3166_1_numeric, date_start, date_end, who_code, who_id, targeted, comments
+-- HAVING COUNT(*) > 1;
+--
+-- the problem is that there are rows where comments are different
+
 use covid_19;
 
 drop table if exists phsm_record_1NF;
@@ -78,6 +85,22 @@ update phsm_record_1NF
 set who_region='EMRO', iso='PAK', iso_3166_1_numeric=586
 where country_territory_area='Pakistan';
 
+-- after cleaning the data we tried to find a combination of attributes that could serve as primary key
+-- by trial and error, we identified this combination to be:
+-- who_code, who_id, targeted, comments
+-- this can be verified by running the following (commented) query
+-- however we can see that the comments attribute is in it, and it can't be removed from
+-- the combination because there are rows that are ientical and the only difference is the comment
+-- since the comment can't be part of the primary key because it doesn't have intrinsic meaning
+-- and therefore cannot logically identify something, plus is is a text field with very variable length,
+-- therefore making it unpractical for this use,
+-- we keep using the artificial primary key 'measure_number' generated during the 1NF normalization 
+--
+-- SELECT *
+-- FROM phsm_record_1NF
+-- GROUP BY who_code, who_id, targeted, comments
+-- HAVING COUNT(*) > 1;
+--
 
 -- 2NF
 -- A relation schema R is in 2NF if every nonprime attribute A in R is
@@ -141,7 +164,7 @@ create table phsm_record (
   date_end date,
   who_id char(80) not null,
   admin_level text,
-  area_covered text,
+  area_covered text, -- TODO put in location
   comments text,
   measure_stage text,
   prev_measure_number char(80),
