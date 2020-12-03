@@ -2,9 +2,6 @@
 -- Student Number : K20113110
 
 
--- TODO maybe include SOURCE *.sql
-
-
 -- The dependencies informaitons are obtained from the phsm documents provided with the dataset
 -- Table dependencies:
 -- lineID uniquely identifies each row
@@ -40,6 +37,8 @@
 
 use covid_19;
 
+-- SOURCE backupDataset.sql
+
 drop table if exists phsm_record_1NF;
 create table phsm_record_1NF (
   measure_number int not null auto_increment,
@@ -70,10 +69,12 @@ create table phsm_record_1NF (
 insert into phsm_record_1NF (who_id, who_region, country_territory_area, iso, iso_3166_1_numeric, admin_level, area_covered, 
 	who_code, who_category, who_subcategory, who_measure, comments, date_start, measure_stage, prev_measure_number, 
     following_measure_number, date_end, reason_ended, targeted, enforcement, non_compliance_penalty)
-select distinct who_id, who_region, country_territory_area, iso, iso_3166_1_numeric, admin_level, if ( area_covered = '' , null , area_covered), 
-	who_code, who_category, if ( who_subcategory = '' , null , who_subcategory), if ( who_measure = '' , null , who_measure), if ( comments = '' , null , comments), 
-    if ( date_start = '' , null , STR_TO_DATE(date_start,'%d/%m/%Y')), if ( measure_stage = '' , null , if(measure_stage = 'introduction / extension of measures', 'new', measure_stage)), if ( prev_measure_number = '' , null , prev_measure_number), 
-    if ( following_measure_number = '' , null , following_measure_number), if ( date_end = '' , null , STR_TO_DATE(date_end,'%d/%m/%Y')), if ( reason_ended= '' , null , reason_ended), if ( targeted= '' , null , targeted), if ( enforcement= '' , 'Not known' , enforcement), if ( non_compliance_penalty= '' , null , non_compliance_penalty)
+select distinct who_id, who_region, country_territory_area, iso, iso_3166_1_numeric, admin_level, if ( area_covered = '', null, area_covered), 
+	who_code, who_category, if ( who_subcategory = '' , null , who_subcategory), if ( who_measure = '' , null , who_measure), if ( comments = '', null, comments), 
+    if ( date_start = '' , null , STR_TO_DATE(date_start,'%d/%m/%Y')), if ( measure_stage = '' , null , if(measure_stage = 'introduction / extension of measures', 'new', measure_stage)), 
+    if ( prev_measure_number = '' , null , prev_measure_number), if ( following_measure_number = '' , null , following_measure_number), 
+    if ( date_end = '' , null , STR_TO_DATE(date_end,'%d/%m/%Y')), if ( reason_ended= '' , null , reason_ended), 
+    if ( targeted= '' , null , targeted), if ( enforcement= '' , 'Not known' , enforcement), if ( non_compliance_penalty= '' , null , non_compliance_penalty)
 from phsm;
 
 -- cleaning step

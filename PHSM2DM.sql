@@ -12,6 +12,7 @@
 -- we are doing this only now because this problem wasn't present in the DB since
 -- the iso and the area_covered were both in the phsms_record table
 
+-- SOURCE PHSM2DB.sql
 
 drop table if exists phsm_dm_record;
 drop table if exists phsm_dm_time;
@@ -99,9 +100,17 @@ create table phsm_dm_record (
 
 -- ---
 -- fill the time dimension table with dates from the minumum date value to the maximum date value present
--- in the date_start ad date_end fields of the record table
--- TODO check date interval for integration
+-- in the date_start ad date_end fields of the phsm_record table
+-- to make the integration easier we are generating the same range of dates for both
+-- the corona and the phsm data mart going from '2019-9-30' '2021-12-31'
+-- this interval allows to fit the dates contained in both the databases
+-- and provides a buffer to insert both older records,
+-- in cases, for example, it turns out that the epidemic started earlier
+-- and older recorded cases are found,
+-- and to add more recent records as the epidemic develops
+-- (here the time interval is '2019-12-31' to '2020-10-01')
 
+/*
 select @min_date := min(dates), @max_date := max(dates) from
 (select distinct date_start as dates
 from phsm_record
@@ -110,6 +119,10 @@ union
 select distinct date_end as dates
 from phsm_record
 where date_end is not null) as dates;
+*/
+
+set @min_date = cast('2019-9-30' as date);
+set @max_date = cast('2021-12-31' as date);
 
 -- from https://stackoverflow.com/questions/10132024/how-to-populate-a-table-with-a-range-of-dates
 DROP PROCEDURE IF EXISTS filldates;

@@ -1,70 +1,55 @@
 -- Student Name: Antonio delle Canne
 -- Student Number : K20113110
 
+-- SOURCE PHSM2DM.sql
+
 -- what are the most commonly adopted first measures?
 
-select pl.country_territory_area, pr.iso, pr.date_start, pr.who_id, ps.*, pr.enforcement, ts.day as day_start, 
-ts.month as month_start, ts.year as year_start, te.day as day_end, te.month as month_end, te.year as year_end
+select pm.*, count(*) as number_of_times_adopted_as_first_measure
 from phsm_dm_record pr
-natural join phsm_dm_who_measure ps
-natural join phsm_dm_location pl
-join phsm_dm_time ts
-on ts.timeCode = pr.date_start
-join phsm_dm_time te
-on te.timeCode = pr.date_end
-where pr.date_start = (
-select pr1.date_start
+join phsm_dm_measure_details pd
+on pr.measure_number = pd.measure_number
+join phsm_dm_who_measure pm
+on pd.who_code = pm.who_code
+join phsm_dm_area rg
+on rg.area_code = pr.area_code
+where pd.who_code = (
+select pd1.who_code
 from phsm_dm_record pr1
-join phsm_dm_time t1
-on t1.timeCode = pr1.date_start
-where pr1.iso = pr.iso
-order by t1.year, t1.month, t1.day asc
+join phsm_dm_measure_details pd1
+on pr1.measure_number = pd1.measure_number
+join phsm_dm_area rg1
+on rg1.area_code = pr1.area_code
+join phsm_dm_time tm1
+on tm1.time_code = pr1.time_code
+join phsm_dm_date dt1
+on tm1.date_start = dt1.timeCode
+where rg1.iso = rg.iso
+group by pd1.who_code, tm1.date_start
+order by dt1.year asc, dt1.month asc, dt1.day asc
 limit 1)
-order by pl.country_territory_area;
+group by pd.who_code
+order by count(*) desc
+limit 5;
 
 
--- what is the most adopted level of enforcement for each measure?
+-- what is the most adopted level of enforcement for each phsm?
+-- when there are ties, both level of enforcement are shown
 
-select ps.*, pr.enforcement as most_applied_level_of_enforcement
+select pm.*, pd.enforcement as most_adopted_level_of_enforcement
 from phsm_dm_record pr
-natural join phsm_dm_who_measure ps
+join phsm_dm_measure_details pd
+on pr.measure_number = pd.measure_number
+join phsm_dm_who_measure pm
+on pd.who_code = pm.who_code
 where enforcement != 'Not known'
-group by pr.who_code, pr.enforcement
+group by pd.who_code, pd.enforcement
 having count(*) >= all(
 select count(*)
 from phsm_dm_record pr1
-natural join phsm_dm_who_measure ps1
-where ps1.who_code = ps.who_code
+join phsm_dm_measure_details pd1
+where pr1.measure_number = pd1.measure_number
 and enforcement != 'Not known'
-group by ps1.who_code, pr1.enforcement)
-order by who_code;
-
--- TODO understand why some who_codes are not in the record table
--- -------------------------------
-
-select * from phsm_dm_who_measure
-where who_code not in (
-select pr.who_code
-from phsm_dm_record pr
-natural join phsm_dm_who_measure ps
--- where enforcement != 'Not known'
-group by pr.who_code, pr.enforcement
-having count(*) >= all(
-select count(*)
-from phsm_dm_record pr1
-natural join phsm_dm_who_measure ps1
-where ps1.who_code = pr.who_code
-and enforcement != 'Not known'
-group by ps1.who_code, pr1.enforcement)
-order by who_code)
-order by who_code;
-
-select who_code, enforcement, count(*)
-from phsm_dm_record pr1
-natural join phsm_dm_who_measure ps1
-group by ps1.who_code, pr1.enforcement
-order by who_code;
-
-select distinct * 
-from phsm_dm_record
-where who_code = '1.3';
+and pd1.who_code = pd.who_code
+group by pd1.who_code, pd1.enforcement)
+order by pm.who_code;
