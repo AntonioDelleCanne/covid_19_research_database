@@ -9,7 +9,7 @@
 -- of the preventive measure and the recodring of the first case in the country?
 
 select sum(if(fm.first_measure_date - fc.first_recorded_case < 0, 1, 0)) as states_that_adopted_preventive_measures, sum(if(fm.first_measure_date - fc.first_recorded_case >= 0, 1, 0)) states_that_did_not_adopt_preventive_measures,
-round(avg(if(fc.first_recorded_case  - fm.first_measure_date > 0, fc.first_recorded_case  - fm.first_measure_date , null))) as avg_delay_preventive_measure_and_first_case 
+round(avg(if(fc.first_recorded_case  - fm.first_measure_date > 0, fc.first_recorded_case  - fm.first_measure_date , null))) as avg_delay_between_preventive_measure_and_first_case 
 from (
 select distinct cr.countryterritoryCode as iso, tm.date as first_recorded_case
 from corona_integration_record cr
@@ -69,7 +69,6 @@ join integration_area ar
 on ar.area_code = pr.area_code
 join integration_time_interval tmi
 on tmi.time_code = pr.time_code
-
 join integration_time tm
 on tmi.date_start = tm.timeCode
 where tm.timeCode = (
