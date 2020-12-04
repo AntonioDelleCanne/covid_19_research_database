@@ -2,10 +2,13 @@
 -- Student Number : K20113110
 
 
+-- before executing this script,
+-- the file backupDataset.sql needs to be executed
+-- on the same schema used when executing this file
+
 -- The dependencies informaitons are obtained from the phsm documents provided with the dataset
 -- Table dependencies:
 -- lineID uniquely identifies each row
--- (who_id, measure_number) uniquely identifies each row
 -- iso <-> iso31661Numeric <-> countryTerritoryArea
 -- iso -> who_region
 -- who_code -> who_category, who_subcategory, who_measure
@@ -13,31 +16,19 @@
 
 -- 1NF
 
--- * Since we are using the distinct comand to eliminate identycal rows (without including the line id),
+-- * Since we are using the distinct comand to eliminate identical rows (without including the original lineID attribute),
 -- the line ids are recreated.
--- (by observing the dataset is emerged that the who_id indicates the announcment (an act/law) of multiple measures.)
--- (by observing the data is is emerged that each who_id can contain different measure, so each measure will be identified)
 -- * textual date representation is converted to sql date data type
 -- * all the empty strings '' are replaced with NULL
 -- * as in the documentation, when area_covered is NULL, it means that the measure is applied to the country / territory
 -- * when enforcement is null we consider it to be 'Not known' and we replace it as such
--- * all the measures with measure_satge as 'introduction / extension of measures' seem to be standalone measures
--- that represent singel events, and have no duration in time, they all have date_end at null and
--- prev_measure_number and following_measure_number at null therefore these measure_stages will be changed to 'new'
--- * TODO since in the targeted field both textual and numerical information appears, we replace the numerical codes with
--- the corresponding meaning of each found in the documentaiton
--- * TODO put links in separate comun, where like https:// till space
-
--- SELECT area_covered, iso_3166_1_numeric, date_start, date_end, who_code, who_id, targeted, comments
--- FROM phsm_record_1NF
--- GROUP BY area_covered, iso_3166_1_numeric, date_start, date_end, who_code, who_id, targeted, comments
--- HAVING COUNT(*) > 1;
---
--- the problem is that there are rows where comments are different
-
-use covid_19;
-
--- SOURCE backupDataset.sql
+-- * by looking at the dataset the measure_stage attribute assumes the values 'new', 'modification', 'extension',
+-- 'phase-out', 'introduction / extension of measures', 'finish', NULL.
+-- Since since all the measures where the measure_satge attribute assumes the value 'introduction / extension of measures'
+-- all have prev_measure_number at null, we assume that they all are are newly introduced measures.
+-- Considering this, since the meaning of 'introduction / extension of measures' is redundant
+-- with the value 'new' and with the value 'extension' ,where the measure_stage attribute 
+-- assumes the value 'introduction / extension of measures', this will be changed to 'new'
 
 drop table if exists phsm_record_1NF;
 create table phsm_record_1NF (
@@ -86,8 +77,8 @@ update phsm_record_1NF
 set who_region='EMRO', iso='PAK', iso_3166_1_numeric=586
 where country_territory_area='Pakistan';
 
--- after cleaning the data we tried to find a combination of attributes that could serve as primary key
--- by trial and error, we identified this combination to be:
+-- After cleaning the data we tried to find a combination of attributes that could serve as primary key,
+-- and by trial and error, we identified this combination to be:
 -- who_code, who_id, targeted, comments
 -- this can be verified by running the following (commented) query
 -- however we can see that the comments attribute is in it, and it can't be removed from
@@ -113,12 +104,12 @@ where country_territory_area='Pakistan';
 -- A relation schema R is in 3NF if it satisfies 2NF and 
 -- no nonprime attribute of R is transitively dependent on the primary key
 --
--- * By observing the table dependencies, we see that who_code -> who_category, who_subcategory, who_measure , aso these are put in a separate table
--- the same is done for iso <-> iso31661Numeric <-> countryTerritoryArea ; iso -> who_region
--- * Also previous and following measure number are references respectively to previous and following phsm disposition's who_id so this is modeled
--- through the use of foreign keys
--- * Sudan,Israel,Pakistan have different who_regions (2), to accomodate this this we are creating the table phsm_iso_region
--- * Also the iso with value 'ISR', is associated with two different  iso_3166_1_numeric values, to accomodate this this we are creating the table phms_iso_iso_3166_1_numeric
+-- * By observing the table dependencies, we see that who_code -> who_category, who_subcategory, who_measure.
+-- For this reason these are put in a separate table.
+-- * The same is done for iso <-> iso31661Numeric <-> countryTerritoryArea ; iso -> who_region
+-- * Sudan,Israel,Pakistan have different who_regions (2). To accomodate this this we are creating the table phsm_iso_region
+-- * Also the iso with value 'ISR', is associated with two different iso_3166_1_numeric values. 
+-- To accomodate this we are creating the table phms_iso_iso_3166_1_numeric
 
 
 drop table if exists phsm_record;

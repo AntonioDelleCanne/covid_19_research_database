@@ -1,10 +1,9 @@
 -- Student Name: Antonio delle Canne
 -- Student Number : K20113110
 
--- the data mart coincides with the 3NF schema in the file corona2DB where the fact table coincides with the corona_record table, and the dimension tables are
--- the corona_location (and the corona_date TO ADD if needed)
-
--- SOURCE corona2DB.sql
+-- before executing this script,
+-- the file corona2DB.sql needs to be executed
+-- on the same schema used when executing this file
 
 drop table if exists corona_dm_record;
 drop table if exists corona_dm_location;
@@ -51,11 +50,6 @@ FROM corona_location;
 -- in cases, for example, it turns out that the epidemic started earlier
 -- and older recorded cases are found,
 -- and to add more recent records as the epidemic develops
--- (here the time interval is '2019-12-31' to '2020-07-23')
-/*
-select @min_date := min(recordingDate), @max_date := max(recordingDate) 
-from corona_record;
-*/
 
 set @min_date = cast('2019-9-30' as date);
 set @max_date = cast('2021-12-31' as date);

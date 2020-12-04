@@ -1,8 +1,9 @@
 -- Student Name: Antonio delle Canne
 -- Student Number : K20113110
 
--- SOURCE corona2DM.sql
--- SOURCE PHSM2DM.sql
+-- before executing this script,
+-- the file corona2DM.sql and PHSM2DM.sql need to be executed
+-- on the same schema used when executing this file
 
 drop table if exists corona_integration_record;
 drop table if exists phsm_integration_record;

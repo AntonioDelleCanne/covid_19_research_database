@@ -2,17 +2,18 @@
 -- Student Number : K20113110
 
 
+-- before executing this script,
+-- the file PHSM2DB.sql needs to be executed
+-- on the same schema used when executing this file
 
--- we are creating a new table indicating the area where the measure is applied, in which we are including the
--- area_covered and the location information we had in the DB
--- we do this because the field area_covered does doesn't make sense on its own
--- and in order to acquire meaning it has to be accessed with the location infoirmation,
--- for insatcne if the area_covered field is null, it means that the measure is applied to the iso area,
--- so we need to access the iso field in order to know what the area_covered is
--- we are doing this only now because this problem wasn't present in the DB since
--- the iso and the area_covered were both in the phsms_record table
-
--- SOURCE PHSM2DB.sql
+-- We are creating a new table indicating the area where the measure is applied, in which we are including the
+-- admin_level, area_covered, and the location information we had in the DB
+-- we do this because the fields admin_level and area_covered 
+-- contain information about the location where the measure is applied.
+-- For insatcne when the area_covered field is null and admin_level is 'national', 
+-- this means that the measure is applied to the iso area.
+-- We didn't do this in the normalization step since this isn't a functional 
+-- dependency and since the iso and the area_covered were both in the phsms_record table.
 
 drop table if exists phsm_dm_record;
 drop table if exists phsm_dm_time;
@@ -53,7 +54,7 @@ create table phsm_dm_area (
 create table phsm_dm_who_measure like phsm_who_measure;
 insert into phsm_dm_who_measure select * from phsm_who_measure;
 
--- since this table contains all of the attributes
+-- since this table contains all of the attributes (see comments in PHSM2DB.sql file)
 -- necessary to uniquely identify each record, each row will correspond to a record
 -- therefore we can use the pk of the phsm_record table as an identifier
 create table phsm_dm_measure_details(

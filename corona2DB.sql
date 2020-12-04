@@ -1,17 +1,20 @@
 -- Student Name: Antonio delle Canne
 -- Student Number : K20113110
 
+-- before executing this script,
+-- the file backupDataset.sql needs to be executed
+-- on the same schema used when executing this file
+
 -- Table dependencies:
--- ( recordingDate, geoId ) uniquely identify each records
+-- ( recordingDate, countryTerritoryCode ) uniquely identify each records
 -- dateRep -> day, month, year
--- geoId <-> countriesAndTerritories <-> countryTerritoryCode <-> popData2019
--- geoId -> continentExp
+-- countryTerritoryCode <-> countriesAndTerritories <-> countryTerritoryCode <-> popData2019
+-- countryTerritoryCode -> continentExp
 
 -- 1NF
 -- The date will be memorized in DATE format of MySQL, so  dateResp, day, month, year, will be removed and replaced with date
--- We also have to choose a primary key, here we choose recording date and geografic id, since the records are recorded by day and by location
-
--- SOURCE backupDataset.sql
+-- We also have to choose a primary key. Here we choose the recordingDate field and the countryterritoryCode.
+-- Since the records are recorded by day and by location these two fields uniquely identiy each record.
 
 drop table if exists corona_record_1NF;
 create table corona_record_1NF (
