@@ -3,8 +3,9 @@
 
 -- what are the most commonly adopted first measures?
 
--- what is the most adopted level of enforcement for each measure?
 
+-- what is the most adopted level of enforcement for each measure?
+--
 -- the levels of enforcement are in the documentation as follows:
 -- The ‘Enforcement’ variable indicates the level of enforcement that authorities were applying to the
 -- measure. ‘Monitored’ is the most stringent of enforcement levels for measures like quarantining at

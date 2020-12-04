@@ -1,10 +1,12 @@
 -- Student Name: Antonio delle Canne
 -- Student Number : K20113110
 
--- SOURCE PHSM2DM.sql
+-- before executing this script,
+-- the file PHSM2DM.sql needs to be executed
+-- on the same schema used when executing this file
 
 -- what are the most commonly adopted first measures?
-
+-- execution time on intel core i5 processor 2 sec
 select pm.*, count(*) as number_of_times_adopted_as_first_measure
 from phsm_dm_record pr
 join phsm_dm_measure_details pd
@@ -35,7 +37,7 @@ limit 5;
 
 -- what is the most adopted level of enforcement for each phsm?
 -- when there are ties, both level of enforcement are shown
-
+-- execution time on intel core i5 processor 2 sec
 select pm.*, pd.enforcement as most_adopted_level_of_enforcement
 from phsm_dm_record pr
 join phsm_dm_measure_details pd

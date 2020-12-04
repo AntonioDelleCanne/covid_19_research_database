@@ -2,7 +2,7 @@
 -- Student Number : K20113110
 
 -- before executing this script,
--- the file corona2DM.sql and PHSM2DM.sql need to be executed
+-- the files corona2DM.sql and PHSM2DM.sql need to be executed
 -- on the same schema used when executing this file
 
 drop table if exists corona_integration_record;
@@ -15,7 +15,6 @@ drop table if exists integration_time_interval;
 drop table if exists integration_time;
 drop table if exists integration_measure_details;
 drop table if exists integration_who_measure;
-
 
 -- -----------------------
 -- this table merges records from  corona_dm_location and phsm_dm_location

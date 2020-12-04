@@ -4,8 +4,8 @@
 
 -- the aim of these research quesitons is to provide an idea of how the virus spread across the globe
 
--- when are the first cases of covid-19 recorded in each country??
--- this first research quesiton allows us to see when the virus reached each country 
+-- when are the first cases of covid-19 recorded in each country?
+-- this first research question allows us to see when the virus reached each country 
 -- for the first time (assuming the virus was recorded when it first reached the country)
 
 

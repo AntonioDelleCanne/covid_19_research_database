@@ -110,8 +110,6 @@ create table phsm_dm_record (
 -- in cases, for example, it turns out that the epidemic started earlier
 -- and older recorded cases are found,
 -- and to add more recent records as the epidemic develops
--- (here the time interval is '2019-12-31' to '2020-10-01')
-
 
 set @min_date = cast('2019-9-30' as date);
 set @max_date = cast('2021-12-31' as date);
