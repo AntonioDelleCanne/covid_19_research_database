@@ -21,6 +21,7 @@ create table corona_dm_location (
 
 create table corona_dm_time(
 	timeCode int NOT NULL AUTO_INCREMENT,
+    date date DEFAULT NULL,
 	day int DEFAULT NULL,
 	month int DEFAULT NULL,
 	year int DEFAULT NULL,
@@ -65,7 +66,7 @@ DELIMITER |
 CREATE PROCEDURE filldates(dateStart DATE, dateEnd DATE)
 BEGIN
   WHILE dateStart <= dateEnd DO
-    INSERT INTO corona_dm_time (day, month, year) VALUES (day(dateStart), month(dateStart), year(dateStart));
+    INSERT INTO corona_dm_time (date, day, month, year) VALUES (dateStart, day(dateStart), month(dateStart), year(dateStart));
     SET dateStart = date_add(dateStart, INTERVAL 1 DAY);
   END WHILE;
 END;

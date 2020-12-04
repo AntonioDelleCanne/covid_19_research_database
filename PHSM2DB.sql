@@ -165,7 +165,7 @@ create table phsm_record (
   date_end date,
   who_id char(80) not null,
   admin_level text,
-  area_covered text, -- TODO put in location
+  area_covered text,
   comments text,
   measure_stage text,
   prev_measure_number char(80),

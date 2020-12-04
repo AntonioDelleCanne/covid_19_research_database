@@ -44,6 +44,7 @@ create table phms_dm_iso_iso_3166_1_numeric (
 create table phsm_dm_area (
 	area_code int not null auto_increment,
     iso char(80) not null,
+    admin_level text,
     area_covered text,
     primary key (area_code),
 	foreign key (iso) references phsm_dm_location(iso)
@@ -59,7 +60,6 @@ create table phsm_dm_measure_details(
   measure_number int not null,
   who_code char(80) not null,
   who_id char(80) not null,
-  admin_level text,
   comments text,
   measure_stage text,
   prev_measure_number char(80),
@@ -74,6 +74,7 @@ create table phsm_dm_measure_details(
 
 create table phsm_dm_date(
 	timeCode int NOT NULL AUTO_INCREMENT,
+    date date default null,
 	day int DEFAULT NULL,
 	month int DEFAULT NULL,
 	year int DEFAULT NULL,
@@ -110,16 +111,6 @@ create table phsm_dm_record (
 -- and to add more recent records as the epidemic develops
 -- (here the time interval is '2019-12-31' to '2020-10-01')
 
-/*
-select @min_date := min(dates), @max_date := max(dates) from
-(select distinct date_start as dates
-from phsm_record
-where date_start is not null
-union 
-select distinct date_end as dates
-from phsm_record
-where date_end is not null) as dates;
-*/
 
 set @min_date = cast('2019-9-30' as date);
 set @max_date = cast('2021-12-31' as date);
@@ -130,7 +121,7 @@ DELIMITER |
 CREATE PROCEDURE filldates(dateStart DATE, dateEnd DATE)
 BEGIN
   WHILE dateStart <= dateEnd DO
-    INSERT INTO phsm_dm_date (day, month, year) VALUES (day(dateStart), month(dateStart), year(dateStart));
+    INSERT INTO phsm_dm_date (date, day, month, year) VALUES (dateStart, day(dateStart), month(dateStart), year(dateStart));
     SET dateStart = date_add(dateStart, INTERVAL 1 DAY);
   END WHILE;
 END;
@@ -148,16 +139,16 @@ select distinct who_region, iso
 from phsm_iso_region;
 
 
-insert into phsm_dm_area (iso, area_covered)
-select distinct iso, area_covered
+insert into phsm_dm_area (iso, admin_level, area_covered)
+select distinct iso, admin_level, area_covered
 from phsm_record;
 
 insert into phsm_dm_measure_details (
-  measure_number, who_code, who_id, admin_level, comments,
+  measure_number, who_code, who_id, comments,
   measure_stage, prev_measure_number,
   following_measure_number, reason_ended,
   targeted, enforcement, non_compliance_penalty)
-select distinct measure_number, who_code, who_id, admin_level, comments,
+select distinct measure_number, who_code, who_id, comments,
   measure_stage, prev_measure_number,
   following_measure_number, reason_ended,
   targeted, enforcement, non_compliance_penalty
